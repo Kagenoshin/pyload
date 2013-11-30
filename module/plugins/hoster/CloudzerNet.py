@@ -1,27 +1,60 @@
 # -*- coding: utf-8 -*-
 import re
+from time import sleep
+from module.utils import html_unescape
 from module.plugins.internal.SimpleHoster import SimpleHoster
 from module.common.json_layer import json_loads
 from module.plugins.ReCaptcha import ReCaptcha
 from module.network.RequestFactory import getURL
 from module.utils import parseFileSize
+from module.plugins.Plugin import chunks
 
+def getID(url):
+    """ returns id from file url"""
+    m = re.match(CloudzerNet.__pattern__, url)
+    return m.group('ID')
+
+def getAPIData(urls):
+    post = {"apikey": CloudzerNet.API_KEY}
+
+    idMap = {}
+
+    for i, url in enumerate(urls):
+        id = getID(url)
+        post["id_%s" % i] = id
+        idMap[id] = url
+
+    for i in xrange(5):
+        api = unicode(getURL("http://cloudzer.net/api/filemultiple", get=post), 'iso-8859-1')
+        if api != "":
+            break
+        else:
+            sleep(3)
+
+    result = {}
+
+    if api:
+        for line in api.splitlines():
+            data = line.split(",", 4)
+            if data[1] in idMap:
+                result[data[1]] = (data[0], data[2], data[4], data[3], idMap[data[1]]) #result[ID] = (on/off, size, name, hashed???, idMap[ID] = url
+
+    return result
 
 def getInfo(urls):
-    for url in urls:
-        header = getURL(url, just_header=True)
-        if 'Location: http://cloudzer.net/404' in header:
-            file_info = (url, 0, 1, url)
-        else:
-            if url.endswith('/'):
-                api_data = getURL(url + 'status')
-            else:
-                api_data = getURL(url + '/status')
-            name, size = api_data.splitlines()
-            size = parseFileSize(size)
-            file_info = (name, size, 2, url)
-        yield file_info
+    for chunk in chunks(urls, 80):
+        result = []
 
+        api = getAPIData(chunk)
+
+        for data in api.itervalues():
+            if data[0] == "online":
+                result.append((html_unescape(data[2]), data[1], 2, data[4])) #name, size, on, url
+
+            elif data[0] == "offline":
+                result.append((data[4], 0, 1, data[4])) #name = url, size, on, url
+
+        yield result
 
 class CloudzerNet(SimpleHoster):
     __name__ = "CloudzerNet"
@@ -36,6 +69,8 @@ class CloudzerNet(SimpleHoster):
     WAIT_PATTERN = '<meta name="wait" content="(\d+)">'
     FILE_OFFLINE_PATTERN = r'Please check the URL for typing errors, respectively'
     CAPTCHA_KEY = '6Lcqz78SAAAAAPgsTYF3UlGf2QFQCNuPMenuyHF3'
+    API_KEY = 'mai1EN4Zieghey1QueGie7fei4eeh5ne'
+
 
     def handleFree(self):
         found = re.search(self.WAIT_PATTERN, self.html)
