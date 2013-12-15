@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.    #
 ############################################################################
 
+from module.network.RequestFactory import getURL
 from module.plugins.internal.MultiHoster import MultiHoster
 
 
