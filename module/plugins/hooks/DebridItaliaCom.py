@@ -29,14 +29,9 @@ class DebridItaliaCom(MultiHoster):
                   ("interval", "int", "Reload interval in hours (0 to disable)", "24")]
 
     __description__ = """Debriditalia.com hook plugin"""
-    __author_name__ = ("stickell")
-    __author_mail__ = ("l.stickell@yahoo.it")
+    __author_name__ = ("stickell", "kagenoshin")
+    __author_mail__ = ("l.stickell@yahoo.it", "kagenoshin@gmx.ch")
 
     def getHoster(self):
-        return ["netload.in", "hotfile.com", "rapidshare.com", "multiupload.com",
-                "uploading.com", "megashares.com", "crocko.com", "filepost.com",
-                "bitshare.com", "share-links.biz", "putlocker.com", "uploaded.to",
-                "speedload.org", "rapidgator.net", "likeupload.net", "cyberlocker.ch",
-                "depositfiles.com", "extabit.com", "filefactory.com", "sharefiles.co",
-                "ryushare.com", "tusfiles.net", "nowvideo.co", "cloudzer.net", "letitbit.net",
-                "easybytez.com"]
+        page = getURL("http://debriditalia.com/api.php?hosts")
+        return [x.strip() for x in page.rstrip(',').replace("\"", "").split(",")]
