@@ -42,7 +42,7 @@ class DebridItaliaCom(Hoster):
         if re.match(self.__pattern__, pyfile.url):
             new_url = pyfile.url
         else:
-            url = "http://debriditalia.com/linkgen2.php?xjxfun=convertiLink&xjxargs[]=S<![CDATA[%s]]>" % pyfile.url
+            url = "http://debriditalia.com/linkgen2.php?xjxfun=convertiLink&xjxargs[]=S<![CDATA[%s]]>" % pyfile.url.replace("clz.to", "cloudzer.net/file")
             page = self.load(url)
             self.logDebug("XML data: %s" % page)
 
