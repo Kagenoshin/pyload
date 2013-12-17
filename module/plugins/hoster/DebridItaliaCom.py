@@ -22,27 +22,26 @@ from module.plugins.Hoster import Hoster
 
 class DebridItaliaCom(Hoster):
     __name__ = "DebridItaliaCom"
-    __version__ = "0.03"
+    __version__ = "0.05"
     __type__ = "hoster"
     __pattern__ = r"https?://.*debriditalia\.com"
     __description__ = """Debriditalia.com hoster plugin"""
     __author_name__ = ("stickell")
     __author_mail__ = ("l.stickell@yahoo.it")
 
-    def init(self):
+    def setup(self):
         self.chunkLimit = -1
         self.resumeDownload = True
 
     def process(self, pyfile):
-        if not self.account:
-            self.logError("Please enter your DebridItalia account or deactivate this plugin")
-            self.fail("No DebridItalia account provided")
-
-        self.logDebug("Old URL: %s" % pyfile.url)
         if re.match(self.__pattern__, pyfile.url):
             new_url = pyfile.url
+        elif not self.account:
+            self.logError(_("Please enter your %s account or deactivate this plugin") % "DebridItalia")
+            self.fail("No DebridItalia account provided")
         else:
-            url = "http://debriditalia.com/linkgen2.php?xjxfun=convertiLink&xjxargs[]=S<![CDATA[%s]]>" % pyfile.url.replace("clz.to", "cloudzer.net/file")
+            self.logDebug("Old URL: %s" % pyfile.url)
+            url = "http://debriditalia.com/linkgen2.php?xjxfun=convertiLink&xjxargs[]=S<![CDATA[%s]]>" % pyfile.url.replace("clz.to", "cloudzer.net/file").replace("http://share-online", "http://www.share-online").replace("share-online.biz/download.php?id=","share-online.biz/dl/")
             page = self.load(url)
             self.logDebug("XML data: %s" % page)
 
@@ -51,7 +50,8 @@ class DebridItaliaCom(Hoster):
             else:
                 new_url = re.search(r'<a href="(?:[^"]+)">(?P<direct>[^<]+)</a>', page).group('direct')
 
-        self.logDebug("New URL: %s" % new_url)
+        if new_url != pyfile.url:
+            self.logDebug("New URL: %s" % new_url)
 
         self.download(new_url, disposition=True)
 
