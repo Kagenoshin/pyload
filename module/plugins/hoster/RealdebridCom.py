@@ -6,13 +6,14 @@ from time import time
 from urllib import quote, unquote
 from random import randrange
 
-from module.utils import parseFileSize, remove_chars
+from module.utils import parseFileSize
 from module.common.json_layer import json_loads
 from module.plugins.Hoster import Hoster
 
+
 class RealdebridCom(Hoster):
     __name__ = "RealdebridCom"
-    __version__ = "0.49"
+    __version__ = "0.54"
     __type__ = "hoster"
 
     __pattern__ = r"https?://.*real-debrid\..*"
@@ -25,30 +26,35 @@ class RealdebridCom(Hoster):
             name = unquote(url.rsplit("/", 1)[1])
         except IndexError:
             name = "Unknown_Filename..."
-        if not name or name.endswith(".."): #incomplete filename, append random stuff
-            name += "%s.tmp" % randrange(100,999)
+        if not name or name.endswith(".."):  # incomplete filename, append random stuff
+            name += "%s.tmp" % randrange(100, 999)
         return name
 
-    def init(self):
-        self.tries = 0
+    def setup(self):
         self.chunkLimit = 3
         self.resumeDownload = True
 
-
     def process(self, pyfile):
-        if not self.account:
-            self.logError(_("Please enter your Real-debrid account or deactivate this plugin"))
-            self.fail("No Real-debrid account provided")
-
-        self.log.debug("Real-Debrid: Old URL: %s" % pyfile.url)
         if re.match(self.__pattern__, pyfile.url):
             new_url = pyfile.url
+        elif not self.account:
+            self.logError(_("Please enter your %s account or deactivate this plugin") % "Real-debrid")
+            self.fail("No Real-debrid account provided")
         else:
-            password = self.getPassword().splitlines()
-            if not password: password = ""
-            else: password = password[0]
+            #handle wrong link formats
+            source_url = pyfile.url
+            #filemonkeyIn
+            source_url = source_url.replace("http://filemonkey.in/", "http://www.filemonkey.in/")
 
-            url = "http://real-debrid.com/ajax/unrestrict.php?lang=en&link=%s&password=%s&time=%s" % (quote(pyfile.url, ""), password, int(time()*1000))
+            self.logDebug("Old URL: %s" % source_url)
+            password = self.getPassword().splitlines()
+            if not password:
+                password = ""
+            else:
+                password = password[0]
+
+            url = "https://real-debrid.com/ajax/unrestrict.php?lang=en&link=%s&password=%s&time=%s" % (
+                quote(source_url, ""), password, int(time() * 1000))
             page = self.load(url)
             data = json_loads(page)
 
@@ -71,7 +77,8 @@ class RealdebridCom(Hoster):
         else:
             new_url = new_url.replace("https://", "http://")
 
-        self.log.debug("Real-Debrid: New URL: %s" % new_url)
+        if new_url != pyfile.url:
+            self.logDebug("New URL: %s" % new_url)
 
         if pyfile.name.startswith("http") or pyfile.name.startswith("Unknown") or pyfile.name.endswith('..'):
             #only use when name wasnt already set
@@ -80,9 +87,8 @@ class RealdebridCom(Hoster):
         self.download(new_url, disposition=True)
 
         check = self.checkDownload(
-                {"error": "<title>An error occured while processing your request</title>"})
+            {"error": "<title>An error occured while processing your request</title>"})
 
         if check == "error":
             #usual this download can safely be retried
             self.retry(reason="An error occured while generating link.", wait_time=60)
-
