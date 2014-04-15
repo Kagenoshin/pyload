@@ -233,14 +233,10 @@ class LinkCryptWS(Crypter):
 
         if cnl_line:
             try:
-                self.logDebug(1)
                 cnl_section = self.handle_javascript(cnl_line)
-                self.logDebug(2)
                 (vcrypted, vjk) = self._getCipherParams(cnl_section)
-                self.logDebug(3)
                 for (crypted, jk) in zip(vcrypted, vjk):
                     package_links.extend(self._getLinks(crypted, jk))
-                self.logDebug(4)
             except:
                 self.fail("Unable to decrypt CNL links")
 
